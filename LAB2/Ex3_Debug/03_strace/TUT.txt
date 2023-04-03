@@ -1,0 +1,12 @@
+1.
+gcc -o test src_strace.c
+cat file.txt
+./test
+
+2. install Strace
+sudo apt install strace
+
+3. Trace 
+strace ./test
+
+

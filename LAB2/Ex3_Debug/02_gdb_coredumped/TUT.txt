@@ -1,0 +1,20 @@
+1. run
+gcc -g -o test src_coredumped.c
+./test => error segmentation default
+
+2. fixing core dump
+ulimit -c unlimited
+
+cat /proc/sys/kernel/core_uses_pid
+echo "1" | sudo tee /proc/sys/kernel/core_uses_pid  
+
+cat /proc/sys/kernel/core_pattern
+echo "core" | sudo tee /proc/sys/kernel/core_pattern
+
+gcc -g -o test src_coredumped.c
+./test => error segmentation default
+
+3. GDB
+gdb test core.2343
+backtrace
+

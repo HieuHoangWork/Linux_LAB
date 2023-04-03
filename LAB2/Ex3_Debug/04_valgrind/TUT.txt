@@ -1,0 +1,9 @@
+1. install valgrind
+sudo apt install valgrind
+
+2. Usage
+gcc -o test src_memleak.c
+
+valgrind --leak-check=yes ./test            /* check memory leak */
+gcc -o test src_memleak.c -Wall -ggdb3      /* check warning */
+valgrind --leak-check=yes ./test            /* check memory leak with line number */

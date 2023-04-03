@@ -1,0 +1,6 @@
+Debug là một công việc quan trọng trong việc lập trình do đó hãy tìm hiểu về segmentation fault, core dumped và cho biết chúng là gì? Viết một chương trình tái hiện lại lỗi. Sau khi tái hiện thành công, tìm hiểu về gdb và trình bày các bước fix cho lỗi này.
+
+1. Lỗi segmentation fault là một lỗi được phát sinh bởi phần cứng có bảo vệ bộ nhớ, thông báo cho hệ điều hành rằng phần mềm đã cố gắng truy cập vào một vùng bộ nhớ bị hạn chế (một vi phạm truy cập bộ nhớ). Lỗi này thường xảy ra khi một chương trình cố gắng truy cập vào một vị trí bộ nhớ mà nó không có quyền truy cập hoặc không tồn tại. Ví dụ, khi một chương trình cố gắng đọc hoặc ghi vào một vùng bộ nhớ chỉ đọc hoặc đã được giải phóng.
+/* Lỗi này hay xảy ra khi sử dụng với con trỏ */
+
+2. Core dump là một tệp chứa bộ nhớ của một quá trình khi quá trình đó kết thúc bất thường. Core dump có thể được tạo ra theo yêu cầu (chẳng hạn như bởi một trình gỡ lỗi) hoặc tự động khi kết thúc. Core dump được kích hoạt bởi kernel để đáp ứng các sự cố của chương trình và có thể được chuyển cho một chương trình trợ giúp (chẳng hạn như systemd-coredump) để xử lý tiếp.

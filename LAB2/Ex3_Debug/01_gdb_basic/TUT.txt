@@ -1,0 +1,20 @@
+/********************GDB*******************/
+Install GDB
+sudo apt install -y gdb
+gdb --version
+
+gdb ./binary 
+    run                                 /* Start GDB debugger
+    ctrl + D                            /* Exit
+    file ./binary                       /* import file
+    break __number__                    /* break point based on number */   vim src_code.c /* :set number => creat number
+    run                                 /* Start debug
+    next(line_number)                   /* run inside the function body
+    return                              /* back to the top of the function
+    step                                /* goto function 
+    continue                            /* execution until the next break point
+    display(var_name)                   /* value variable 
+    print(var_name)                     /* print value variable once
+    print &(var_name)                   /* print value variable address
+    ptype(var_name)                     /* type of variable
+    set variable [var_name] = [value]   /* set value for variable
