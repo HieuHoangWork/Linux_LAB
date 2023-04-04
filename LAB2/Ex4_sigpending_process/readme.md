@@ -1,0 +1,7 @@
+Chương trình trên sử dụng hàm sigpending() để kiểm tra xem có tín hiệu nào đang chờ xử lý hay không. Đầu tiên, chương trình định nghĩa một hàm SIGUSR1_handle() để xử lý tín hiệu SIGUSR1. Sau đó, chương trình định nghĩa một hàm check_pending() để kiểm tra xem có tín hiệu nào đang chờ xử lý hay không bằng cách gọi hàm sigpending() và kiểm tra kết quả bằng cách sử dụng hàm sigismember().
+
+Trong hàm main(), chương trình thiết lập một trình xử lý tín hiệu cho tín hiệu SIGUSR1 bằng cách gọi hàm SIGUSR1_handle. Sau đó, chương trình khởi tạo một tập hợp tín hiệu sigset và thêm tín hiệu SIGUSR1 vào tập hợp này. Chương trình sau đó sử dụng hàm sigprocmask() để chặn tất cả các tín hiệu trong tập hợp sigset.
+
+Sau khi chặn các tín hiệu, chương trình gửi một tín hiệu SIGUSR1 đến tiến trình hiện tại bằng cách sử dụng hàm kill(). Do các tín hiệu SIGUSR1 đã bị chặn, nên tín hiệu này sẽ được đưa vào hàng đợi chờ xử lý. Chương trình sau đó gọi hàm check_pending() để kiểm tra xem có tín hiệu nào đang chờ xử lý hay không.
+
+Cuối cùng, chương trình khởi tạo lại tập hợp sigset và sử dụng hàm sigprocmask() để bỏ chặn các tín hiệu. Khi các tín hiệu được bỏ chặn, tín hiệu SIGUSR1 đang chờ xử lý sẽ được giao cho tiến trình và hàm SIGUSR1_handle() sẽ được gọi. Chương trình sau đó gọi lại hàm check_pending() để kiểm tra lại xem có tín hiệu nào đang chờ xử lý hay không.
