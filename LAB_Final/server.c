@@ -13,11 +13,20 @@
 #include <signal.h>
 
 #define MAX_CLIENTS 10
-#define MAX_BUFFER_SIZE 2048
+#define BUFFER_SIZE 2048
 
+/* Hàm xử lý lỗi */
+#define handle_error(msg)   \
+    do                      \
+    {                       \
+        perror(msg);        \
+        exit(EXIT_FAILURE); \
+    } while (0)
+
+/* Initizalize 3 threads: conn_mgr, data_mgr, stor_mgr */
 pthread_t conn_mgr, data_mgr, stor_mgr;
 
-/* Handle data in thread data_mgr and stor_mgr */
+/* Handle synchronization data in thread data_mgr and stor_mgr */
 pthread_cond_t data_ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t data_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 int data_ready = 0;
@@ -42,6 +51,7 @@ pthread_mutex_t data_mutex;
 SensorData *head = NULL;
 
 /* Function handle data */
+static void cleanup();
 static void sigchld_handle(int signum);
 static void *thr_conn_mgr_handle(void *args);
 static void *thr_data_mgr_handle(void *args);
@@ -51,7 +61,7 @@ static void *thr_stor_mgr_handle(void *args);
 int main(int argc, char *argv[])
 {
     /* Created portnumber on command line */
-    if (argc < 2)
+    if (argc != 2)
     {
         printf("No port provided\ncommand: ./server <port number>\n");
         exit(EXIT_FAILURE);
@@ -67,40 +77,18 @@ int main(int argc, char *argv[])
     {
         if (0 == sensor_gateway)
         {
-            int ret;
             /* Created Sensor gateway process - Child process*/
             printf("Sensor gateway process, my PID = %d : parent's PID: %d\n", getpid(), getppid());
 
-            /* Transmit argv[1] ~ port_num to thread conn_mgr  */
+            /* Transmit argv[1] = port_num to thread conn_mgr  */
             THR_DATA_T thr_data;
             memset(&thr_data, 0x0, sizeof(THR_DATA_T));
-
             strncpy(thr_data.argv_name, argv[1], sizeof(thr_data.argv_name));
 
             /* Created 3 threads: conn_mgr, data_mgr, stor_mgr*/
-            if (ret = pthread_create(&conn_mgr, NULL, &thr_conn_mgr_handle, &thr_data) != 0)
-            {
-                printf("pthread_create() error number=%d\n", ret);
-                return -1;
-            }
-
-            sleep(1);
-
-            if (ret = pthread_create(&data_mgr, NULL, &thr_data_mgr_handle, NULL) != 0)
-            {
-                printf("pthread_create() error number=%d\n", ret);
-                return -1;
-            }
-
-            sleep(1);
-
-            if (ret = pthread_create(&stor_mgr, NULL, &thr_stor_mgr_handle, NULL) != 0)
-            {
-                printf("pthread_create() error number=%d\n", ret);
-                return -1;
-            }
-
-            sleep(1);
+            pthread_create(&conn_mgr, NULL, &thr_conn_mgr_handle, &thr_data);
+            pthread_create(&data_mgr, NULL, &thr_data_mgr_handle, NULL);
+            pthread_create(&stor_mgr, NULL, &thr_stor_mgr_handle, NULL);
 
             /* Thread terminate */
             pthread_join(conn_mgr, NULL);
@@ -113,7 +101,7 @@ int main(int argc, char *argv[])
         else
         {
             /* Created Log process - Parent process*/
-            sleep(5);
+            sleep(3);
             /* When a child is terminated, a corresponding SIGCHLD signalis delivered to the parent */
             signal(SIGCHLD, sigchld_handle);
             printf("\nLog process, my PID = %d\n", getpid());
@@ -127,11 +115,28 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+static void cleanup()
+{
+    pthread_mutex_destroy(&data_mutex);
+    pthread_mutex_destroy(&data_ready_mutex);
+    pthread_cond_destroy(&data_ready_cond);
+
+    SensorData *current = head;
+    SensorData *temp;
+
+    while (current != NULL)
+    {
+        temp = current;
+        current = current->next;
+        free(temp);
+    }
+}
 
 /* Hàm waitpid sẽ chờ đợi cho tất cả các process con đã kết thúc */
 static void sigchld_handle(int signum)
 {
     printf("Process terminate\n");
+    cleanup();
     while (waitpid(-1, NULL, WNOHANG) > 0)
         ;
 }
@@ -143,32 +148,28 @@ static void *thr_conn_mgr_handle(void *args)
     struct sockaddr_in server_address, client_address;
     socklen_t addrlen = sizeof(client_address);
     fd_set readfds;
-    char buffer[MAX_BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];
 
-    // Create server socket
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
-    {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Set server address
+    /* Khởi tạo địa chỉ server */
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(atoi(data->argv_name));
 
+    /* Tạo socket */
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == -1)
+        handle_error("socket()");
+
     // Bind server socket to address
     if (bind(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
     {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
+        handle_error("bind failed");
     }
 
     // Listen for incoming connections
     if (listen(server_fd, 3) < 0)
     {
-        perror("listen failed");
-        exit(EXIT_FAILURE);
+        handle_error("listen failed");
     }
 
     printf("Thread conn_mgr running. Listening on port %s\n", data->argv_name);
@@ -187,8 +188,7 @@ static void *thr_conn_mgr_handle(void *args)
 
         if (activity < 0)
         {
-            perror("select failed");
-            exit(EXIT_FAILURE);
+            handle_error("select failed");
         }
 
         // If something happened on the server socket, it is an incoming connection
@@ -196,21 +196,22 @@ static void *thr_conn_mgr_handle(void *args)
         {
             if ((client_fd = accept(server_fd, (struct sockaddr *)&client_address, &addrlen)) < 0)
             {
-                perror("accept failed");
-                exit(EXIT_FAILURE);
+                handle_error("accept failed");
             }
             printf("New client connected, IP: %s, Port: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
+            int disconnected = 0;
             // Else it is some IO operation on some other socket
-            while (1) // Thêm vòng lặp vô hạn tại đây để đọc dữ liệu gửi đến
+            while (!disconnected) // Thay đổi từ vòng lặp vô hạn sang kiểm tra cờ disconnected
             {
                 int valread;
-                if ((valread = read(client_fd, buffer, MAX_BUFFER_SIZE)) == 0)
+
+                if ((valread = read(client_fd, buffer, BUFFER_SIZE)) == 0)
                 {
                     // Somebody disconnected
                     printf("Device disconnected, IP: %s, Port: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
                     close(client_fd);
-                    break; // Thêm break để thoát khỏi vòng lặp khi client ngắt kết nối
+                    disconnected = 1; // Đặt cờ disconnected khi kết nối bị ngắt kết nối
                 }
                 else
                 {
@@ -235,8 +236,14 @@ static void *thr_conn_mgr_handle(void *args)
                     new_node->next = head;
                     head = new_node;
                     pthread_mutex_unlock(&data_mutex);
+
+                    pthread_mutex_lock(&data_ready_mutex);
+                    data_ready = 1;
+                    pthread_cond_signal(&data_ready_cond);
+                    pthread_mutex_unlock(&data_ready_mutex);
                 }
             }
+            disconnected = 0; // Đặt lại cờ disconnected để chờ kết nối tiếp theo
         }
     }
     return NULL;
@@ -290,7 +297,6 @@ static void *thr_data_mgr_handle(void *args)
                     data_ready = 1;
                     pthread_cond_signal(&data_ready_cond);
                     pthread_mutex_unlock(&data_ready_mutex);
-
                     break;
                 }
             }
