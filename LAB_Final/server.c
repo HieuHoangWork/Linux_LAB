@@ -2,26 +2,52 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <errno.h>
+#include <pthread.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 #define MAX_CLIENTS 10
+#define MAX_BUFFER_SIZE 2048
 
 pthread_t conn_mgr, data_mgr, stor_mgr;
+
+/* Handle data in thread data_mgr and stor_mgr */
+pthread_cond_t data_ready_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t data_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
+int data_ready = 0;
+
+/* Lưu trữ thông tin tham số nhập vào khi chạy ./server -> truyền dữ liệu vào thread */
 typedef struct
 {
     int argc_value;
     char argv_name[30];
-} thr_data_t;
+} THR_DATA_T;
 
+/* Link list data receive and synchronization */
+typedef struct SensorData
+{
+    char sensor_id[32];
+    float temperature;
+    time_t timestamp;
+    struct SensorData *next;
+} SensorData;
+
+pthread_mutex_t data_mutex;
+SensorData *head = NULL;
+
+/* Function handle data */
 static void sigchld_handle(int signum);
 static void *thr_conn_mgr_handle(void *args);
 static void *thr_data_mgr_handle(void *args);
 static void *thr_stor_mgr_handle(void *args);
 
+/* Main */
 int main(int argc, char *argv[])
 {
     /* Created portnumber on command line */
@@ -30,6 +56,9 @@ int main(int argc, char *argv[])
         printf("No port provided\ncommand: ./server <port number>\n");
         exit(EXIT_FAILURE);
     }
+
+    /* Init mutex */
+    pthread_mutex_init(&data_mutex, NULL);
 
     /* Created child process */
     pid_t sensor_gateway = fork();
@@ -43,13 +72,13 @@ int main(int argc, char *argv[])
             printf("Sensor gateway process, my PID = %d : parent's PID: %d\n", getpid(), getppid());
 
             /* Transmit argv[1] ~ port_num to thread conn_mgr  */
-            thr_data_t soc_inf;
-            memset(&soc_inf, 0x0, sizeof(thr_data_t));
+            THR_DATA_T thr_data;
+            memset(&thr_data, 0x0, sizeof(THR_DATA_T));
 
-            strncpy(soc_inf.argv_name, argv[1], sizeof(soc_inf.argv_name));
+            strncpy(thr_data.argv_name, argv[1], sizeof(thr_data.argv_name));
 
             /* Created 3 threads: conn_mgr, data_mgr, stor_mgr*/
-            if (ret = pthread_create(&conn_mgr, NULL, &thr_conn_mgr_handle, &soc_inf))
+            if (ret = pthread_create(&conn_mgr, NULL, &thr_conn_mgr_handle, &thr_data) != 0)
             {
                 printf("pthread_create() error number=%d\n", ret);
                 return -1;
@@ -57,7 +86,7 @@ int main(int argc, char *argv[])
 
             sleep(1);
 
-            if (ret = pthread_create(&data_mgr, NULL, &thr_data_mgr_handle, NULL))
+            if (ret = pthread_create(&data_mgr, NULL, &thr_data_mgr_handle, NULL) != 0)
             {
                 printf("pthread_create() error number=%d\n", ret);
                 return -1;
@@ -65,7 +94,7 @@ int main(int argc, char *argv[])
 
             sleep(1);
 
-            if (ret = pthread_create(&stor_mgr, NULL, &thr_stor_mgr_handle, NULL))
+            if (ret = pthread_create(&stor_mgr, NULL, &thr_stor_mgr_handle, NULL) != 0)
             {
                 printf("pthread_create() error number=%d\n", ret);
                 return -1;
@@ -99,28 +128,22 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+/* Hàm waitpid sẽ chờ đợi cho tất cả các process con đã kết thúc */
 static void sigchld_handle(int signum)
 {
     printf("Process terminate\n");
-    wait(NULL);
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+        ;
 }
 
 static void *thr_conn_mgr_handle(void *args)
 {
-    int server_fd, client_fd[MAX_CLIENTS], max_clients = MAX_CLIENTS, activity, max_sd;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
+    THR_DATA_T *data = (THR_DATA_T *)args;
+    int server_fd, client_fd, max_clients = MAX_CLIENTS, activity, max_sd;
+    struct sockaddr_in server_address, client_address;
+    socklen_t addrlen = sizeof(client_address);
     fd_set readfds;
-    char buffer[1024];
-
-    thr_data_t *data = (thr_data_t *)args;
-
-    printf("Thread conn_mgr running. Listening on port %s\n", data->argv_name);
-    // Initialize all client sockets to 0
-    for (int i = 0; i < max_clients; i++)
-    {
-        client_fd[i] = 0;
-    }
+    char buffer[MAX_BUFFER_SIZE];
 
     // Create server socket
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -130,12 +153,12 @@ static void *thr_conn_mgr_handle(void *args)
     }
 
     // Set server address
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(atoi(data->argv_name)); /* ./server 8080 */
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_port = htons(atoi(data->argv_name));
 
     // Bind server socket to address
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+    if (bind(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
     {
         perror("bind failed");
         exit(EXIT_FAILURE);
@@ -148,6 +171,8 @@ static void *thr_conn_mgr_handle(void *args)
         exit(EXIT_FAILURE);
     }
 
+    printf("Thread conn_mgr running. Listening on port %s\n", data->argv_name);
+
     while (1)
     {
         // Clear the socket set
@@ -156,19 +181,6 @@ static void *thr_conn_mgr_handle(void *args)
         // Add server socket to set
         FD_SET(server_fd, &readfds);
         max_sd = server_fd;
-
-        // Add child sockets to set
-        for (int i = 0; i < max_clients; i++)
-        {
-            if (client_fd[i] > 0)
-            {
-                FD_SET(client_fd[i], &readfds);
-            }
-            if (client_fd[i] > max_sd)
-            {
-                max_sd = client_fd[i];
-            }
-        }
 
         // Wait for activity on one of the sockets
         activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
@@ -179,58 +191,165 @@ static void *thr_conn_mgr_handle(void *args)
             exit(EXIT_FAILURE);
         }
 
-        // If something happened on the server socket,
-        // then it is an incoming connection
+        // If something happened on the server socket, it is an incoming connection
         if (FD_ISSET(server_fd, &readfds))
         {
-            int new_socket;
-            if ((new_socket = accept(server_fd,
-                                     (struct sockaddr *)&address,
-                                     (socklen_t *)&addrlen)) < 0)
+            if ((client_fd = accept(server_fd, (struct sockaddr *)&client_address, &addrlen)) < 0)
             {
                 perror("accept failed");
                 exit(EXIT_FAILURE);
             }
+            printf("New client connected, IP: %s, Port: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
-            // Add new socket to array of sockets
-            for (int i = 0; i < max_clients; i++)
-            {
-                if (client_fd[i] == 0)
-                {
-                    client_fd[i] = new_socket;
-                    break;
-                }
-            }
-        }
-
-        // Else it is some IO operation on some other socket
-        for (int i = 0; i < max_clients; i++)
-        {
-            if (FD_ISSET(client_fd[i], &readfds))
+            // Else it is some IO operation on some other socket
+            while (1) // Thêm vòng lặp vô hạn tại đây để đọc dữ liệu gửi đến
             {
                 int valread;
-                if ((valread = read(client_fd[i], buffer, 1024)) == 0)
+                if ((valread = read(client_fd, buffer, MAX_BUFFER_SIZE)) == 0)
                 {
                     // Somebody disconnected
-                    close(client_fd[i]);
-                    client_fd[i] = 0;
+                    printf("Device disconnected, IP: %s, Port: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+                    close(client_fd);
+                    break; // Thêm break để thoát khỏi vòng lặp khi client ngắt kết nối
                 }
                 else
                 {
                     buffer[valread] = '\0';
-                    printf("%s\n", buffer);
+                    printf("Received from client: %s\n", buffer);
+
+                    // Phân tích dữ liệu
+                    char sensor_id[32];
+                    float temperature;
+                    time_t timestamp;
+
+                    sscanf(buffer, "/%31[^/]/%f/%ld", sensor_id, &temperature, &timestamp);
+
+                    // Tạo một node mới và thêm vào danh sách liên kết
+                    SensorData *new_node = (SensorData *)malloc(sizeof(SensorData));
+                    strcpy(new_node->sensor_id, sensor_id);
+                    new_node->temperature = temperature;
+                    new_node->timestamp = timestamp;
+                    new_node->next = NULL;
+
+                    pthread_mutex_lock(&data_mutex);
+                    new_node->next = head;
+                    head = new_node;
+                    pthread_mutex_unlock(&data_mutex);
                 }
             }
         }
     }
+    return NULL;
 }
 
 static void *thr_data_mgr_handle(void *args)
 {
     printf("Thread data_mgr running ...\n");
+
+    while (1)
+    {
+        pthread_mutex_lock(&data_ready_mutex);
+        while (!data_ready)
+        {
+            pthread_cond_wait(&data_ready_cond, &data_ready_mutex);
+        }
+        data_ready = 0;
+        pthread_mutex_unlock(&data_ready_mutex);
+
+        pthread_mutex_lock(&data_mutex);
+        SensorData *current = head;
+        SensorData *previous = NULL;
+        int count = 0;
+        float sum_temperature = 0;
+        time_t sum_timestamp = 0;
+        char sensor_id[32];
+
+        while (current != NULL)
+        {
+            if (count == 0)
+            {
+                strcpy(sensor_id, current->sensor_id);
+            }
+
+            if (strcmp(sensor_id, current->sensor_id) == 0)
+            {
+                sum_temperature += current->temperature;
+                sum_timestamp += current->timestamp;
+                count++;
+
+                if (count == 5)
+                {
+                    float average_temperature = sum_temperature / count;
+                    time_t average_timestamp = sum_timestamp / count;
+                    const char *temp_string = average_temperature > 20 ? "TOO HOT" : (average_temperature < 13 ? "TOO COLD" : "NORMAL");
+
+                    printf("/%s/%ld/%s\n", sensor_id, average_timestamp, temp_string);
+
+                    // Send signal to stor_mgr
+                    pthread_mutex_lock(&data_ready_mutex);
+                    data_ready = 1;
+                    pthread_cond_signal(&data_ready_cond);
+                    pthread_mutex_unlock(&data_ready_mutex);
+
+                    break;
+                }
+            }
+
+            previous = current;
+            current = current->next;
+        }
+        pthread_mutex_unlock(&data_mutex);
+    }
+
+    return NULL;
 }
 
 static void *thr_stor_mgr_handle(void *args)
 {
     printf("Thread stor_mgr running ...\n");
+
+    while (1)
+    {
+        pthread_mutex_lock(&data_ready_mutex);
+        while (!data_ready)
+        {
+            pthread_cond_wait(&data_ready_cond, &data_ready_mutex);
+        }
+        data_ready = 0;
+        pthread_mutex_unlock(&data_ready_mutex);
+
+        pthread_mutex_lock(&data_mutex);
+        SensorData *current = head;
+        SensorData *previous = NULL;
+        FILE *file = fopen("Data.txt", "a");
+
+        int count = 0;
+        char sensor_id[32];
+
+        while (current != NULL && count < 5)
+        {
+            if (count == 0)
+            {
+                strcpy(sensor_id, current->sensor_id);
+            }
+
+            if (strcmp(sensor_id, current->sensor_id) == 0)
+            {
+                fprintf(file, "/%s/%f/%ld\n", current->sensor_id, current->temperature, current->timestamp);
+                head = current->next;
+                free(current);
+                current = head;
+                count++;
+            }
+            else
+            {
+                previous = current;
+                current = current->next;
+            }
+        }
+        fclose(file);
+        pthread_mutex_unlock(&data_mutex);
+    }
+
+    return NULL;
 }
