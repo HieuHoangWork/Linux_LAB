@@ -2,18 +2,27 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/types.h> /* Socket */
+/* Socket */
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <pthread.h>   /* Thread */
-#include <semaphore.h> /* Semaphore */
-#include <sys/wait.h>  /* Signal */
+/* Thread */
+#include <pthread.h>
+/* Semaphore */
+#include <semaphore.h>
+/* Signal */
+#include <sys/wait.h>
 #include <signal.h>
+/* FIFO */
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #define MAX_CLIENTS 10
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 1024
+#define FIFO_FILE "./myfifo"
+#define LOG_PATH "./log.txt"
 
 // Hàm xử lý lỗi
 #define handle_error(msg)   \
@@ -30,6 +39,7 @@ pthread_t conn_mgr, data_mgr, stor_mgr;
 pthread_mutex_t data_mutex;
 sem_t ser_ready_for_data_mgr;
 sem_t ser_ready_for_stor_mgr;
+sem_t ser_ready_for_log_process;
 
 // Lưu trữ thông tin tham số nhập vào khi chạy ./server -> truyền dữ liệu vào thread
 typedef struct
@@ -43,12 +53,17 @@ Node *head = NULL;
 // Lưu trữ trạng thái của chương trình
 volatile sig_atomic_t running = 1;
 
+// Khởi tạo số sequence number cho FIFO
+unsigned int log_sequence_number = 0;
+
 // Function handle data
 static void cleanup();
 static void sigterm_handle(int signum);
 static void *thr_conn_mgr_handle(void *args);
 static void *thr_data_mgr_handle(void *args);
 static void *thr_stor_mgr_handle(void *args);
+void write_log_event(const char *fifo_path, const char *log_event);
+void read_fifo_and_write_to_file(const char *fifo_path, const char *log_file_path);
 
 // Main
 int main(int argc, char *argv[])
@@ -64,6 +79,16 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&data_mutex, NULL);
     sem_init(&ser_ready_for_data_mgr, 0, 0);
     sem_init(&ser_ready_for_stor_mgr, 0, 0);
+    sem_init(&ser_ready_for_log_process, 0, 0);
+
+    // Created FIFO
+    if (mkfifo(FIFO_FILE, 0777) == -1)
+    {
+        if (errno != EEXIST)
+        {
+            handle_error("mkfifo");
+        }
+    }
 
     // Created child process
     pid_t sensor_gateway = fork();
@@ -107,8 +132,16 @@ int main(int argc, char *argv[])
             // When a child is terminated, a corresponding SIGCHLD signalis delivered to the parent
             signal(SIGTERM, sigterm_handle);
             printf("\nLog process, my PID = %d\n", getpid());
-            while (1)
-                ;
+
+            while (running)
+            {
+                sem_wait(&ser_ready_for_log_process);
+                printf("hehe\n");
+                // Xử lý dữ liệu khi nhận được tín hiệu
+                pthread_mutex_lock(&data_mutex);
+                read_fifo_and_write_to_file(FIFO_FILE, LOG_PATH);
+                pthread_mutex_unlock(&data_mutex);
+            }
         }
     }
     else
@@ -137,6 +170,69 @@ static void sigterm_handle(int signum)
     printf("Log process received SIGTERM, shutting down...\n");
     cleanup();
     exit(EXIT_SUCCESS);
+}
+
+void write_log_event(const char *fifo_path, const char *log_event)
+{
+    int fifo_fd = open(fifo_path, O_RDWR | O_NONBLOCK);
+    if (fifo_fd == -1)
+    {
+        handle_error("open");
+    }
+
+    ssize_t bytes_written = write(fifo_fd, log_event, strlen(log_event));
+    if (bytes_written == -1)
+    {
+        handle_error("write");
+    }
+
+    close(fifo_fd);
+}
+
+void read_fifo_and_write_to_file(const char *fifo_path, const char *log_file_path)
+{
+    int fifo_fd = open(fifo_path, O_RDWR | O_NONBLOCK);
+    if (fifo_fd == -1)
+    {
+        handle_error("open");
+    }
+
+    FILE *log_file = fopen(log_file_path, "a");
+    if (log_file == NULL)
+    {
+        handle_error("fopen");
+    }
+
+    char buffer[BUFFER_SIZE];
+    ssize_t read_bytes;
+
+    // Đọc dữ liệu từ fifo_fd cho đến khi không còn dữ liệu
+    while (1)
+    {
+        read_bytes = read(fifo_fd, buffer, BUFFER_SIZE);
+
+        if (read_bytes == BUFFER_SIZE)
+        {
+            fwrite(buffer, sizeof(char), read_bytes, log_file);
+            fflush(log_file);
+        }
+        else if (read_bytes > 0)
+        {
+            fprintf(stderr, "Warning: read less than BUFFER_SIZE bytes: %zd\n", read_bytes);
+            break;
+        }
+        else if (read_bytes == 0)
+        {
+            break; // Không còn dữ liệu trong FIFO
+        }
+        else
+        {
+            handle_error("read");
+        }
+    }
+
+    close(fifo_fd);
+    fclose(log_file);
 }
 
 static void *thr_conn_mgr_handle(void *args)
@@ -227,6 +323,13 @@ static void *thr_conn_mgr_handle(void *args)
             }
             printf("New client connected, IP: %s, Port: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
+            // Log event: new connection
+            char log_event[BUFFER_SIZE];
+            sprintf(log_event, "%d %ld A sensor node with IP: %s and Port: %d has opened a new connection.", log_sequence_number++, time(NULL), inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+            write_log_event(FIFO_FILE, log_event);
+
+            sem_post(&ser_ready_for_log_process);
+
             // Add new socket to array of sockets
             for (int i = 0; i < max_clients; i++)
             {
@@ -253,13 +356,21 @@ static void *thr_conn_mgr_handle(void *args)
                         // Somebody disconnected
                         getpeername(sd, (struct sockaddr *)&client_address, &addrlen);
                         printf("Device disconnected, IP: %s, Port: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+
+                        // Log event: closed connection
+                        char log_event[BUFFER_SIZE];
+                        sprintf(log_event, "%d %ld The sensor node with IP: %s and Port: %d has closed the connection.", log_sequence_number++, time(NULL), inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+                        write_log_event(FIFO_FILE, log_event);
+
+                        sem_post(&ser_ready_for_log_process);
+
                         close(sd);
                         client_socket[i] = 0;
                     }
                     else
                     {
                         buffer[valread] = '\0';
-                        printf("Received from client: %s\n", buffer);
+                        // printf("Received from client: %s\n", buffer);
 
                         // Phân tích dữ liệu
                         char sensor_id[32];

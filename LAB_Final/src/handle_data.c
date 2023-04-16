@@ -111,7 +111,19 @@ void data_handle(Node *head)
         }
         if (processed_count == 5)
         {
-            printf("ID%d/%.2f/%ld\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+            if (sum_TEMP / processed_count > 16)
+            {
+                printf("ID%d/%.2f/%ld - TOO HOT\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+            }
+            else if (sum_TEMP / processed_count < 14)
+            {
+                printf("ID%d/%.2f/%ld - TOO COLD\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+            }
+            else
+            {
+                printf("ID%d/%.2f/%ld - NORMAL\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+            }
+
             temp->DELETE = 1;
         }
         temp = current;
@@ -124,7 +136,7 @@ void save_data_to_file(Node *head)
     file = fopen("data.txt", "a");
     if (file == NULL)
     {
-        printf("fopen() Data.txt failed\n");
+        printf("fopen() data.txt failed\n");
         return;
     }
 
