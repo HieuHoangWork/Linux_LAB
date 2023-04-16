@@ -121,7 +121,7 @@ void data_handle(Node *head)
 void save_data_to_file(Node *head)
 {
     FILE *file;
-    file = fopen("Data.txt", "a");
+    file = fopen("data.txt", "a");
     if (file == NULL)
     {
         printf("fopen() Data.txt failed\n");
