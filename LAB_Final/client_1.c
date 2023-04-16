@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define BUFFER_SIZE 2048
-#define DEVICE_ID "DEVICE_1"
+#define DEVICE_ID "1"
 
 /* Hàm xử lý lỗi */
 #define handle_error(msg)   \
@@ -28,7 +28,6 @@ int main(int argc, char *argv[])
     }
 
     char buffer[BUFFER_SIZE];
-
     int server_fd;
     struct sockaddr_in serv_addr;
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -50,13 +49,18 @@ int main(int argc, char *argv[])
 
     printf("Connected to server\n");
     srand(time(NULL)); // Initialize random seed
+    int count = 0;
 
     while (1)
     {
+        count++;
+        if (count == 11)
+            break;
+
         int temperature = rand() % 14 + 9; // Generate a random number between 9 and 22
         time_t timestamp = time(NULL);
 
-        snprintf(buffer, BUFFER_SIZE, "/%s/%d/%ld", DEVICE_ID, temperature, timestamp);
+        snprintf(buffer, BUFFER_SIZE, "%s/%d/%ld", DEVICE_ID, temperature, timestamp);
 
         // Send message to server
         if (send(server_fd, buffer, strlen(buffer), 0) < 0)
@@ -69,8 +73,7 @@ int main(int argc, char *argv[])
 
         // Clear the buffer
         memset(buffer, 0, BUFFER_SIZE);
-
-        sleep(2); // You can adjust the time interval between sending data here
+        sleep(2);
     }
 
     close(server_fd);
