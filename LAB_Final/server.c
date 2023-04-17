@@ -21,8 +21,8 @@
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
-#define FIFO_FILE "./myfifo"
-#define LOG_PATH "./log.txt"
+#define FIFO_FILE "../tmp/myfifo"
+#define LOG_PATH "../tmp/log.txt"
 
 // Hàm xử lý lỗi
 #define handle_error(msg)   \
