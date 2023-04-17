@@ -1,6 +1,9 @@
-#include "handle_data.h"
+#include "processing_linked_list.h"
+#include "processing_FIFO.h"
 
-void data_save(Node **head, int ID, float TEMP, time_t TIME)
+extern int log_sequence_number;
+
+void save_data_to_linked_list(Node **head, int ID, float TEMP, time_t TIME)
 {
     Node *new_node = (Node *)malloc(sizeof(Node));
     new_node->ID = ID;
@@ -11,7 +14,7 @@ void data_save(Node **head, int ID, float TEMP, time_t TIME)
     *head = new_node;
 }
 
-void sort_list_by_ID(Node **head)
+void sort_linked_list_by_ID_and_TIME(Node **head)
 {
     // Sắp xếp danh sách liên kết theo ID
     Node *temp = *head;
@@ -89,7 +92,7 @@ void sort_list_by_ID(Node **head)
     }
 }
 
-void data_handle(Node *head)
+void averaged_temp_linked_list(Node *head)
 {
     Node *temp = head;
     while (temp != NULL)
@@ -114,14 +117,23 @@ void data_handle(Node *head)
             if (sum_TEMP / processed_count > 16)
             {
                 printf("ID%d/%.2f/%ld - TOO HOT\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+                char log_event[BUFFER_SIZE];
+                sprintf(log_event, "%d ID%d/%.2f/%ld - TOO HOT\n", log_sequence_number++, temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+                write_to_FIFO(FIFO_PATH, log_event);
             }
             else if (sum_TEMP / processed_count < 14)
             {
                 printf("ID%d/%.2f/%ld - TOO COLD\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+                char log_event[BUFFER_SIZE];
+                sprintf(log_event, "%d ID%d/%.2f/%ld - TOO COLD\n", log_sequence_number++, temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+                write_to_FIFO(FIFO_PATH, log_event);
             }
             else
             {
                 printf("ID%d/%.2f/%ld - NORMAL\n", temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+                char log_event[BUFFER_SIZE];
+                sprintf(log_event, "%d ID%d/%.2f/%ld - NORMAL\n", log_sequence_number++, temp->ID, sum_TEMP / processed_count, sum_TIME / processed_count);
+                write_to_FIFO(FIFO_PATH, log_event);
             }
 
             temp->DELETE = 1;
@@ -130,7 +142,7 @@ void data_handle(Node *head)
     }
 }
 
-void save_data_to_file(Node *head)
+void copy_data_from_linked_list_to_data_file(Node *head)
 {
     FILE *file;
     file = fopen("../tmp/data.txt", "a");
@@ -155,7 +167,7 @@ void save_data_to_file(Node *head)
     fclose(file);
 }
 
-void remove_data(Node **head)
+void remove_data_from_linked_list(Node **head)
 {
     Node *temp = *head;
     Node *prev = NULL;
