@@ -133,7 +133,7 @@ void data_handle(Node *head)
 void save_data_to_file(Node *head)
 {
     FILE *file;
-    file = fopen("data.txt", "a");
+    file = fopen("../tmp/data.txt", "a");
     if (file == NULL)
     {
         printf("fopen() data.txt failed\n");

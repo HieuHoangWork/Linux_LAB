@@ -16,13 +16,14 @@ all:
 	$(CC) obj_static/server.o -Llib/static -lstatic -o bin/server
 
 valgrind_server:
-	valgrind --leak-check=yes ./bin/server 8080 
+	cd bin && valgrind --leak-check=yes ./server 8080 
 valgrind_client_1:
-	valgrind --leak-check=yes ./bin/client_1 $(IP_CLIE) 8080
+	cd bin && valgrind --leak-check=yes ./client_1 $(IP_CLIE) 8080
 valgrind_client_2:
-	valgrind --leak-check=yes ./bin/client_2 $(IP_CLIE) 8080  
+	cd bin && valgrind --leak-check=yes ./client_2 $(IP_CLIE) 8080  
 clean:
 	find bin -type f ! -name ".gitkeep" -exec rm -f {} +	
 	find obj_static -type f ! -name ".gitkeep" -exec rm -f {} +
 	find lib/static -type f ! -name ".gitkeep" -exec rm -f {} +
 	find tmp -type f ! -name ".gitkeep" -exec rm -f {} +
+	rm -f tmp/myfifo
