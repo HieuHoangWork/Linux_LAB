@@ -12,8 +12,9 @@ all:
 	$(CC) -c server.c -o obj_static/server.o $(CFLAGS) $(VALG_LAGS) -pthread -lpthread
 	$(CC) -c src/processing_linked_list.c -o obj_static/processing_linked_list.o $(CFLAGS)
 	$(CC) -c src/processing_FIFO.c -o obj_static/processing_FIFO.o $(CFLAGS)
+	$(CC) -c src/socket_server.c -o obj_static/socket_server.o $(CFLAGS)
 
-	ar rcs lib/static/libstatic.a obj_static/processing_linked_list.o obj_static/processing_FIFO.o 
+	ar rcs lib/static/libstatic.a obj_static/processing_linked_list.o obj_static/processing_FIFO.o  obj_static/socket_server.o 
 	$(CC) obj_static/server.o -Llib/static -lstatic -o bin/server
 
 valgrind_server:

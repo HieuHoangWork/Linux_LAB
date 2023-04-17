@@ -17,17 +17,5 @@ Chạy lệnh "make" để build ra file thực thi
 
 Chương trình không bị memleak
 
-/* BUG */
 
-Bên trong // Log event: new connection (A search đoạn này trong server.c nhé)
-    Sau khi chạy lệnh write_log_event(FIFO_FILE, log_event);
-    Dữ liệu đã được ghi vào FIFO
-    Tiếp đến gọi sem_post(&ser_ready_for_log_process) để gửi thông báo đến Log_Process nhưng gặp lỗi chỗ nào đó mà Log_Process không nhận được tín hiệu. 
-    Đây là phần em code chờ tín hiệu trong Log_Process
-    /*
-                while (running)
-            {
-                sem_wait(&ser_ready_for_log_process);
-                printf("hehe\n");
-    */ Em có để printf ra dòng này để biết nó có nhận được tín hiệu hay không nhưng mà nó không in ra nên em đoán BUG ở đây.
 
