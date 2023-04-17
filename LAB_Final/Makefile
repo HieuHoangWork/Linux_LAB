@@ -22,4 +22,7 @@ valgrind_client_1:
 valgrind_client_2:
 	valgrind --leak-check=yes ./bin/client_2 $(IP_CLIE) 8080  
 clean:
-	rm -rf obj_static/* bin/* lib/static/* tmp/*
+	find bin -type f ! -name ".gitkeep" -exec rm -f {} +	
+	find obj_static -type f ! -name ".gitkeep" -exec rm -f {} +
+	find lib/static -type f ! -name ".gitkeep" -exec rm -f {} +
+	find tmp -type f ! -name ".gitkeep" -exec rm -f {} +
