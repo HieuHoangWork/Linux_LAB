@@ -33,9 +33,9 @@ int main(int argc, char *argv[])
     memset(&serv_addr, '0', sizeof(serv_addr));
 
     /* Khởi tạo địa chỉ server */
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(atoi(argv[2]));
-    if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) == -1)
+    serv_addr.sin_family = AF_INET;                             /* IPV4 */
+    serv_addr.sin_port = htons(atoi(argv[2]));                  /* Port address*/
+    if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) == -1) /* IP address */
         handle_error("inet_pton()");
 
     /* Tạo socket */

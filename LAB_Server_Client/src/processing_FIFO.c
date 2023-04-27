@@ -12,7 +12,6 @@ void created_FIFO(const char *fifo_path)
 {
     if (mkfifo(fifo_path, 0666) == -1)
     {
-
         handle_error("mkfifo");
     }
 }
