@@ -129,9 +129,8 @@ int main()
 
             sem_post(mutex__NON_Vegan);
             sem_post(empty__NON_Vegan);
-
-            /* Sleep between 4 and 7 seconds */
-            sleep(3 + rand_r(&seed) % 5);
+            /* Sleep between 10 and 15 seconds */
+            sleep(10 + rand_r(&seed) % 6);
         }
     }
 
@@ -158,9 +157,69 @@ int main()
 
             sem_post(mutex_Vegan);
             sem_post(empty_Vegan);
+            /* Sleep between 10 and 15 seconds */
+            sleep(10 + rand_r(&seed) % 6);
+        }
+    }
 
-            /* Sleep between 4 and 7 seconds */
-            sleep(3 + rand_r(&seed) % 5);
+    /* Child consumer_Both process */
+    if ((consumer_Both = fork()) == 0)
+    {
+        srand(time(NULL));
+        unsigned int seed = rand();
+        while (1)
+        {
+            struct timespec timeout;
+            clock_gettime(CLOCK_REALTIME, &timeout);
+            timeout.tv_sec += 3;
+
+            int result_Vegan = sem_timedwait(full_Vegan, &timeout);
+            if (result_Vegan == 0)
+            {
+                sem_wait(mutex_Vegan);
+
+                /* Take meal from buffer Vegan */
+                int read_Vegan = read_from_buffer(buffer_Vegan, BUFFER_SIZE);
+                if (read_Vegan == Fettuccine_Chicken_Alfredo)
+                {
+                    printf("consumer_Both take Fettuccine_Chicken_Alfredo\n");
+                }
+                else if (read_Vegan == Garlic_Sirloin_Steak)
+                {
+                    printf("consumer_Both take Garlic_Sirloin_Steak\n");
+                }
+
+                sem_post(mutex_Vegan);
+                sem_post(empty_Vegan);
+            }
+            else
+            {
+                clock_gettime(CLOCK_REALTIME, &timeout);
+                timeout.tv_sec += 3;
+
+                int result__NON_Vegan = sem_timedwait(full__NON_Vegan, &timeout);
+                if (result__NON_Vegan == 0)
+                {
+                    sem_wait(mutex__NON_Vegan);
+
+                    /* Take meal from buffer _NON_Vegan */
+                    int read__NON_Vegan = read_from_buffer(buffer__NON_Vegan, BUFFER_SIZE);
+                    if (read__NON_Vegan == Pistachio_Pesto_Pasta)
+                    {
+                        printf("consumer_Both take Pistachio_Pesto_Pasta\n");
+                    }
+                    else if (read__NON_Vegan == Avocado_Fruit_Salad)
+                    {
+                        printf("consumer_Both take Avocado_Fruit_Salad\n");
+                    }
+
+                    sem_post(mutex__NON_Vegan);
+                    sem_post(empty__NON_Vegan);
+                }
+            }
+
+            /* Sleep between 10 and 15 seconds */
+            sleep(10 + rand_r(&seed) % 6);
         }
     }
 
@@ -174,7 +233,7 @@ int main()
             int takenSlots__NON_Vegan;
             sem_getvalue(full_Vegan, &takenSlots_Vegan);
             sem_getvalue(full__NON_Vegan, &takenSlots__NON_Vegan);
-            printf("\nItems in vegane dish: %d/%d    Items in vegane dish: %d/%d\n", takenSlots_Vegan, BUFFER_SIZE, takenSlots__NON_Vegan, BUFFER_SIZE);
+            printf("\nItems in Vegan dish: %d/%d    Items in NON_Vegane dish: %d/%d\n", takenSlots_Vegan, BUFFER_SIZE, takenSlots__NON_Vegan, BUFFER_SIZE);
         }
     }
 }
