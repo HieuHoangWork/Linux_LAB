@@ -3,12 +3,15 @@
 
 Biến static có các đặc điểm sau:
 
-+ Phạm vi (scope): Biến static có phạm vi cục bộ đối với hàm hoặc khối mã mà nó được khai báo, nhưng nó không thể truy cập từ bên ngoài hàm hoặc khối mã đó.
-+ Tuổi thọ (lifespan): Biến static được khởi tạo một lần duy nhất khi chương trình bắt đầu thực thi và giữ giá trị của nó cho đến khi chương trình kết thúc. Điều này có nghĩa là giá trị của biến static không bị mất đi khi hàm hoặc khối mã chứa nó kết thúc.
+    + Phạm vi (scope): Biến static có phạm vi cục bộ đối với hàm hoặc khối mã mà nó được khai báo, nhưng nó không thể truy cập từ bên ngoài hàm hoặc khối mã đó.
+
+    + Tuổi thọ (lifespan): Biến static được khởi tạo một lần duy nhất khi chương trình bắt đầu thực thi và giữ giá trị của nó cho đến khi chương trình kết thúc. Điều này có nghĩa là giá trị của biến static không bị mất đi khi hàm hoặc khối mã chứa nó kết thúc.
 
 Khi sử dụng biến static trong C, bạn thường gặp hai trường hợp sau:
-+ Biến static trong hàm: Khi khai báo một biến static trong hàm, biến này sẽ chỉ được khởi tạo một lần và giữ giá trị của nó giữa các lần gọi hàm. Điều này hữu ích khi bạn muốn giữ lại giá trị của biến giữa các lần gọi hàm mà không cần sử dụng biến toàn cục.
-+ Biến static cấp độ tập tin (file-level): Biến static cấp độ tập tin được khai báo ở cấp độ tập tin (ngoài các hàm), và chỉ có thể truy cập được từ các hàm trong cùng một tập tin mã nguồn. Điều này giúp giới hạn phạm vi của biến, ngăn ngừa truy cập trực tiếp từ mã nguồn khác và giúp bảo vệ dữ liệu.
+
+    + Biến static trong hàm: Khi khai báo một biến static trong hàm, biến này sẽ chỉ được khởi tạo một lần và giữ giá trị của nó giữa các lần gọi hàm. Điều này hữu ích khi bạn muốn giữ lại giá trị của biến giữa các lần gọi hàm mà không cần sử dụng biến toàn cục.
+    
+    + Biến static cấp độ tập tin (file-level): Biến static cấp độ tập tin được khai báo ở cấp độ tập tin (ngoài các hàm), và chỉ có thể truy cập được từ các hàm trong cùng một tập tin mã nguồn. Điều này giúp giới hạn phạm vi của biến, ngăn ngừa truy cập trực tiếp từ mã nguồn khác và giúp bảo vệ dữ liệu.
 
 Ví dụ về biến static trong hàm:
 
@@ -34,24 +37,39 @@ int main() {
 Hàm, hàm inline và macro là ba khái niệm khác nhau trong ngôn ngữ lập trình C, mỗi loại có các ưu và nhược điểm riêng. Dưới đây là một so sánh giữa chúng:
 
 - Hàm (Function):
+
     + Hàm là một khối mã được định nghĩa riêng biệt, thực hiện một tác vụ cụ thể. Mỗi hàm đều có một địa chỉ cụ thể có thể truy cập được thông qua con trỏ hàm
+
     + Khi gọi hàm, chương trình sẽ thực hiện việc truyền tham số, lưu trữ thông tin về ngăn xếp (stack), và nhảy đến địa chỉ của hàm.
+
     + Hàm có thể gây ra độ trễ nhỏ do việc gọi hàm (truy cập vào giá trị địa chỉ hàm) và trả về giá trị.
+
     + Hàm cho phép kiểm soát tốt hơn về phạm vi và truy cập biến.
+
     + Các hàm định nghĩa trong C không được thực thi inline một cách mặc định.
 
 - Hàm inline (Inline function):
+
     + Hàm inline là một loại hàm đặc biệt trong C, được chỉ định bằng từ khoá inline.
+
     + Mục đích của hàm inline là giảm độ trễ khi gọi hàm bằng cách chèn trực tiếp mã của hàm vào nơi gọi hàm (như macro), thay vì thực hiện gọi hàm thông thường.
+
     + Hàm inline giúp giảm độ trễ, tuy nhiên, nó có thể làm tăng kích thước mã nhị phân của chương trình (do việc chèn mã hàm vào nhiều nơi).
+
     + Hàm inline vẫn kiểm soát tốt phạm vi và truy cập biến như hàm thông thường.
+
     + Việc sử dụng hàm inline là một gợi ý cho trình biên dịch, nhưng không phải lúc nào trình biên dịch cũng tuân thủ gợi ý đó.
 
 - Macro (Macro):
+
     + Macro là một đoạn mã được xử lý bởi trình tiền xử lý (preprocessor) trước khi biên dịch chương trình.
+
     + Khi macro được gọi, trình tiền xử lý sẽ thay thế lệnh gọi macro bằng mã của macro trước khi biên dịch.
+
     + Macro không gây ra độ trễ do gọi hàm, nhưng có thể làm tăng kích thước mã nhị phân của chương trình.
+
     + Macro không kiểm soát tốt phạm vi và truy cập biến như hàm và hàm inline.
+
     + Macro có thể dẫn đến các vấn đề liên quan đến thứ tự đánh giá, vì chúng thực hiện thay thế văn bản mà không quan tâm đến ngữ cảnh.
 
 Ví dụ: 
@@ -70,10 +88,15 @@ inline int add_inline(int a, int b) {
 #define ADD_MACRO(a, b) ((a) + (b))
 
 Khi lựa chọn giữa hàm, hàm inline và macro, bạn nên xem xét các yếu tố sau:
+
     + Nếu bạn cần kiểm soát tốt phạm vi và truy cập biến, hãy sử dụng hàm hoặc hàm inline.
+
     + Nếu bạn muốn giảm độ trễ do gọi hàm và không quá lo lắng về kích thước mã nhị phân, hãy sử dụng hàm inline hoặc macro.
+
     + Nếu bạn cần một đoạn mã linh hoạt hơn và không cần kiểm soát phạm vi và truy cập biến, hãy sử dụng macro.
+
     + Trong nhiều trường hợp, hàm inline là một giải pháp tốt để kết hợp lợi ích của cả hàm thông thường và macro.
+    
 Tuy nhiên, cần lưu ý rằng các trình biên dịch hiện đại rất thông minh và có thể tự động tối ưu hóa mã nguồn của bạn. Do đó, đôi khi không cần thiết phải quá lo lắng về việc chọn giữa hàm, hàm inline và macro. Thay vào đó, hãy tập trung vào việc viết mã nguồn rõ ràng, dễ đọc và dễ bảo trì.
 
 > 3. Structure

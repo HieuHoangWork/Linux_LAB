@@ -3,14 +3,23 @@
 > 1. Phân biệt Program, Process
 
 - Program (chương trình):
+
     + Chương trình là một tập hợp các hướng dẫn (instructions) được viết bằng ngôn ngữ lập trình để thực hiện một nhiệm vụ cụ thể.
+
     + Chương trình được lưu trữ trên đĩa (ổ cứng) dưới dạng file nhị phân (binary) hoặc mã nguồn (source code).
+
     + Chương trình không thực thi (chạy) bởi chính nó mà cần một tiến trình (process) để thực thi nó.
+
     Ví dụ: Khi bạn viết một ứng dụng bằng C, Java, Python, v.v., bạn tạo ra một chương trình.
+
 - Process (tiến trình):
+
     + Tiến trình là một phiên bản thực thi (running instance) của một chương trình đang được thực hiện trên bộ xử lý (CPU) của máy tính.
+
     + Khi một chương trình được chạy, hệ điều hành tạo ra một tiến trình và cấp phát cho nó các tài nguyên (như bộ nhớ, đĩa, thiết bị ngoại vi, v.v.) để thực hiện chương trình đó.
+
     + Mỗi tiến trình có một không gian địa chỉ riêng biệt (private address space) và không thể trực tiếp truy cập vào không gian địa chỉ của tiến trình khác, trừ khi thông qua các phương thức liên tiến trình (inter-process communication - IPC).
+
     Ví dụ: Khi bạn mở trình duyệt web, một tiến trình của trình duyệt sẽ được hệ điều hành tạo ra và chạy chương trình trình duyệt.
 
 > 2. Process layout bao gồm những segment nào?
@@ -41,9 +50,13 @@ Context switching (chuyển đổi ngữ cảnh) là quá trình lưu trữ tr�
 
 Quá trình context switching diễn ra như sau:
     1. Tiến trình hiện tại bị ngắt (interrupt): Điều này có thể xảy ra do nhiều lý do, chẳng hạn như hết thời gian chạy được cấp phát (time slice), chờ tín hiệu từ thiết bị ngoại vi hoặc đợi một sự kiện nào đó.
+
     2. Lưu trạng thái tiến trình hiện tại: Hệ điều hành lưu trạng thái của tiến trình hiện tại vào bộ nhớ, bao gồm các giá trị của thanh ghi (registers), con trỏ ngăn xếp (stack pointer), con trỏ chỉ thị (instruction pointer) và các thông tin liên quan đến tiến trình đó. Trạng thái này được gọi là "context" của tiến trình.
+
     3. Chọn tiến trình tiếp theo: Hệ điều hành sử dụng một thuật toán lập lịch (scheduling algorithm) để chọn tiến trình tiếp theo sẽ được chạy. Có nhiều thuật toán lập lịch khác nhau, như Round Robin, Priority Scheduling, Shortest Job First, v.v.
+
     4. Nạp trạng thái tiến trình mới: Hệ điều hành nạp trạng thái (context) của tiến trình mới vào bộ nhớ và thiết lập các giá trị của thanh ghi (registers), con trỏ ngăn xếp (stack pointer), con trỏ chỉ thị (instruction pointer) và các thông tin liên quan khác.
+
     5. Tiếp tục thực thi tiến trình mới: Hệ điều hành tiếp tục thực thi tiến trình mới, bắt đầu từ điểm dừng cuối cùng của tiến trình này.
 
 Quá trình context switching có chi phí về thời gian và tài nguyên, do đó việc tối ưu hóa quá trình chuyển đổi ngữ cảnh là rất quan trọng trong việc cải thiện hiệu suất hệ thống.
@@ -52,13 +65,21 @@ Quá trình context switching có chi phí về thời gian và tài nguyên, do
 Zombie process (tiến trình zombie) và orphan process (tiến trình mồ côi) là hai khái niệm liên quan đến tiến trình (process) trong hệ điều hành. Dưới đây là sự phân biệt giữa chúng:
 
 - Zombie process (tiến trình zombie):
+
     + Một tiến trình được gọi là zombie khi nó đã hoàn thành công việc của mình (đã kết thúc) nhưng vẫn còn tồn tại trong bảng tiến trình của hệ điều hành (process table).
+
     + Điều này xảy ra khi tiến trình cha (parent process) không đọc thông tin trạng thái kết thúc (exit status) của tiến trình con (child process) thông qua hàm wait() hoặc các biến thể khác của nó.
+
     + Tiến trình zombie không sử dụng tài nguyên hệ thống (trừ một số lượng nhỏ bộ nhớ cho bảng tiến trình), nhưng vẫn chiếm một vị trí trong bảng tiến trình.
+
     + Nếu có quá nhiều tiến trình zombie, hệ thống có thể hết không gian cho bảng tiến trình, dẫn đến việc không thể tạo thêm tiến trình mới.
+
 - Orphan process (tiến trình mồ côi):
+
     + Một tiến trình được coi là mồ côi khi tiến trình cha (parent process) của nó kết thúc trước khi tiến trình con (child process) hoàn thành công việc của mình.
+
     + Khi tiến trình cha kết thúc, hệ điều hành gán tiến trình mồ côi cho tiến trình "init" (process ID 1) hoặc một tiến trình cha thay thế khác. Điều này giúp đảm bảo quy trình thu dọn (cleanup) và quản lý tiến trình được thực hiện đúng cách.
+
     + Tiến trình mồ côi vẫn tiếp tục thực thi bình thường và sử dụng tài nguyên hệ thống, nhưng không còn được quản lý bởi tiến trình cha ban đầu.
 
 Tóm lại, zombie process là một tiến trình đã kết thúc nhưng vẫn tồn tại trong bảng tiến trình do tiến trình cha không đọc thông tin trạng thái kết thúc của nó, trong khi orphan process là một tiến trình vẫn đang chạy nhưng không còn được quản lý bởi tiến trình cha ban đầu.
@@ -68,11 +89,17 @@ Tóm lại, zombie process là một tiến trình đã kết thúc nhưng vẫn
 Process image (hình ảnh tiến trình) là một cấu trúc dữ liệu trong hệ điều hành mô tả toàn bộ thông tin về một tiến trình (process) khi nó đang chạy. Hình ảnh tiến trình bao gồm cả trạng thái và không gian bộ nhớ của tiến trình, giúp hệ điều hành quản lý và điều khiển tiến trình đó.
 
 Một số thành phần chính của hình ảnh tiến trình bao gồm:
+
     + Code segment (phân đoạn mã): Chứa mã máy (executable code) của chương trình.
+
     + Data segment (phân đoạn dữ liệu): Chứa các biến toàn cục (global) và biến tĩnh (static) được khởi tạo.
+
     + BSS segment (phân đoạn Block Started by Symbol): Chứa các biến toàn cục (global) và biến tĩnh (static) chưa được khởi tạo hoặc được khởi tạo với giá trị 0.
+
     + Heap segment (phân đoạn heap): Chứa bộ nhớ động được cấp phát bởi chương trình thông qua các hàm như malloc(), calloc(), realloc() trong C hoặc new trong C++.
+
     + Stack segment (phân đoạn stack): Chứa ngăn xếp (stack) gọi hàm của chương trình, bao gồm các biến cục bộ (local), thông tin trả về (return information) và các địa chỉ trả về (return addresses) của các hàm.
+
     + Process Control Block (PCB): Là một cấu trúc dữ liệu quan trọng chứa thông tin về tiến trình, bao gồm ID tiến trình, trạng thái tiến trình (running, ready, waiting, v.v.), thông tin về đăng ký (registers), con trỏ ngăn xếp (stack pointer), con trỏ chỉ thị (instruction pointer), thông tin về ưu tiên, thông tin về tài nguyên và các thông tin khác cần thiết để quản lý tiến trình.    
     
 Khi một chương trình được chạy, hệ điều hành tạo ra một hình ảnh tiến trình cho chương trình đó. Hình ảnh tiến trình cung cấp một khung tham chiếu cho hệ điều hành khi quản lý và điều khiển tiến trình.
@@ -82,6 +109,7 @@ Khi một chương trình được chạy, hệ điều hành tạo ra một hì
 Khi một Child Process kết thúc vòng đời thực thi của mình, một tín hiệu (signal) được gửi đến Parent Process để thông báo về sự kiện này. Tín hiệu được gửi trong trường hợp này là SIGCHLD.
 
 SIGCHLD là một tín hiệu được gửi đến Parent Process khi một trong những sự kiện sau xảy ra:
+
     + Child Process kết thúc (terminated).
     + Child Process bị dừng (stopped), ví dụ như do một tín hiệu SIGSTOP hoặc SIGTSTP.
     + Child Process tiếp tục chạy sau khi bị dừng (resumed), ví dụ như do một tín hiệu SIGCONT.
