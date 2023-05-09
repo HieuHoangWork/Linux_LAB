@@ -1,0 +1,1 @@
+cmd_/home/hieuhoangwork/work/Linux_LAB/LAB_GPIO/GPIOs_device_driver/gpio.mod := { echo  /home/hieuhoangwork/work/Linux_LAB/LAB_GPIO/GPIOs_device_driver/gpio.o;  echo; } > /home/hieuhoangwork/work/Linux_LAB/LAB_GPIO/GPIOs_device_driver/gpio.mod
