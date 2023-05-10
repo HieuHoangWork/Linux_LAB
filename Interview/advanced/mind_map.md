@@ -217,15 +217,14 @@ Ví dụ: việc đọc dữ liệu từ tệp tin, nếu hàm đọc tệp bấ
     + Khi một luồng muốn chờ đợi điều kiện, nó sẽ khóa mutex và kiểm tra điều kiện. Nếu điều kiện chưa thỏa mãn, luồng đó sẽ chuyển sang trạng thái chờ đợi trên biến điều kiện và tự động giải phóng mutex. Khi điều kiện được thỏa mãn (thông thường do một luồng khác thay đổi trạng thái của tài nguyên chung), luồng đó sẽ thông báo cho một hoặc tất cả các luồng đang chờ đợi trên biến điều kiện. Các luồng chờ đợi sẽ tỉnh lại, khóa lại mutex và kiểm tra lại điều kiện trước khi tiếp tục thực thi.
 
 > 5. Giải thích các khái niệm: atomic/non-atomic, shared resource, critical section.
-- Atomic (nguyên tử) / Non-atomic (phi nguyên tử):
-    + Atomic: Trong lập trình đa luồng, một hoạt động được gọi là atomic nếu nó được hoàn thành trong một bước không thể chia nhỏ hơn và không thể bị xen lẫn với các hoạt động khác. Một hoạt động atomic đảm bảo rằng khi nhiều luồng thực thi đồng thời, không có luồng nào có thể quan sát hoạt động đó ở trạng thái chưa hoàn thành.
-    + Non-atomic: Một hoạt động non-atomic là hoạt động có thể bị chia nhỏ thành nhiều bước, và các bước này có thể bị xen lẫn với các hoạt động khác khi thực thi đồng thời. Hoạt động non-atomic có thể gây ra các vấn đề trong lập trình đa luồng, như race conditions, nếu không được xử lý cẩn thận.
+- Atomic (Độc quyền): Khi chỉ có một luồng truy cập vào vùng shared resource hoặc critical section
+- Non-atomic: Khi có nhiều luồng muốn truy cập và sử dụng shared resource hoặc critical section
 
-- Shared Resource (tài nguyên chia sẻ):
+- Shared Resource:
     + Shared Resource là một tài nguyên (biến, cấu trúc dữ liệu, tệp, v.v.) được truy cập bởi nhiều luồng trong một quá trình hoặc giữa các quá trình khác nhau. Khi nhiều luồng truy cập đồng thời vào một tài nguyên chia sẻ, có thể xảy ra các vấn đề xung đột nếu không có cơ chế đồng bộ hóa phù hợp, như mutex hoặc semaphore.
 
-- Critical Section (mảng mã nguy hiểm):
-    + Critical Section là một phần mã nguồn mà trong đó một luồng truy cập và/hoặc thay đổi tài nguyên chia sẻ. Để đảm bảo tính ổn định và an toàn của chương trình, chỉ có một luồng cùng một thời điểm được phép thực thi trong critical section. Các công cụ đồng bộ hóa như mutex, semaphore, hoặc atomic operations được sử dụng để bảo vệ critical section, ngăn chặn các vấn đề liên quan đến đa luồng như race conditions hay deadlocks.
+- Critical Section:
+    + Critical Section là một phần mã nguồn mà trong đó một luồng truy cập thay đổi tài nguyên chia sẻ. Các công cụ đồng bộ hóa như mutex, semaphore, hoặc atomic operations được sử dụng để bảo vệ critical section, ngăn chặn các vấn đề liên quan đến đa luồng như race conditions hay deadlocks.
 
 Tóm lại, atomic và non-atomic mô tả cách thức hoạt động của các tác vụ trong lập trình đa luồng; shared resource là tài nguyên được truy cập bởi nhiều luồng; và critical section là phần mã nguồn mà các luồng truy cập vào tài nguyên chia sẻ. Để đảm bảo tính ổn định
 
@@ -233,13 +232,8 @@ Tóm lại, atomic và non-atomic mô tả cách thức hoạt động của cá
 Deadlock là tình huống mà các tiến trình hoặc luồng chờ đợi lẫn nhau để giải phóng tài nguyên mà chúng đang giữ, dẫn đến việc không có tiến trình nào có thể tiếp tục thực thi. 
 
 Vd:
-    + Lập trình viên không đủ cẩn thận trong việc sắp xếp thứ tự khóa và giải phóng tài nguyên, dẫn đến deadlock:
-    Ví dụ: Tiến trình A giữ tài nguyên X và đang chờ để giành quyền truy cập vào tài nguyên Y. Đồng thời, tiến trình B giữ tài nguyên Y và đang chờ để giành quyền truy cập vào tài nguyên X. Cả hai tiến trình đều không giải phóng tài nguyên của mình trước khi yêu cầu tài nguyên khác, dẫn đến deadlock.
+    + Tiến trình A giữ tài nguyên X và đang chờ để giành quyền truy cập vào tài nguyên Y. Đồng thời, tiến trình B giữ tài nguyên Y và đang chờ để giành quyền truy cập vào tài nguyên X. Cả hai tiến trình đều không giải phóng tài nguyên của mình trước khi yêu cầu tài nguyên khác, dẫn đến deadlock.
    
     + Deadlock có thể xảy ra khi có nhiều luồng chờ đợi một sự kiện mà không bao giờ xảy ra hoặc không được thông báo. Điều này thường xảy ra khi sử dụng các cơ chế đồng bộ hóa như biến điều kiện (conditional variables) hoặc semaphore.
    
-    + Deadlock cũng có thể xảy ra do các tiến trình hoặc luồng chờ đợi lẫn nhau để giải quyết các vấn đề bảo mật, như deadlocks trong hệ thống phân quyền hoặc hệ thống tài nguyên.
-   
     + Deadlock xảy ra khi có nhiều tiến trình hoặc luồng chờ đợi để giành quyền truy cập vào một tài nguyên giới hạn, nhưng không có cơ chế phân bổ tài nguyên hiệu quả.
-
-Để tránh hiện tượng deadlock, lập trình viên nên áp dụng các nguyên tắc và kỹ thuật phòng ngừa deadlock, như thứ tự khóa tài nguyên (lock ordering), phát hiện và phục hồi deadlock, hoặc sử dụng các cơ chế đồng bộ hóa không gây deadlock (như lock-free hay wait-free data structures).

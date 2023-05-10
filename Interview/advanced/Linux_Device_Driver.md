@@ -80,10 +80,10 @@ Cơ chế interrupt là một phần quan trọng của hệ điều hành và �
 Trong hệ thống máy tính, việc xử lý các interrupt đôi khi được chia thành hai phần: top half và bottom half. Cách chia này giúp giảm thiểu thời gian mà CPU bị ngắt, tăng hiệu suất và ổn định hệ thống. Dưới đây là khái niệm về top half, bottom half và cách sử dụng chúng:
 
 1. Top half:
-    Top half là phần xử lý đầu tiên của interrupt, thường được thực hiện ngay khi interrupt xảy ra. Nhiệm vụ chính của top half là xử lý các công việc cấp bách và tối thiểu, như xác định nguồn gây ra interrupt và đưa thông tin liên quan vào hàng đợi. Sau đó, top half sẽ kết thúc và cho phép CPU tiếp tục thực thi chương trình đang chạy trước đó. Top half thường ngắn gọn và nhanh chóng để giảm thiểu thời gian ngắt của CPU.
+    Top half là phần xử lý đầu tiên của interrupt, được thực hiện ngay khi interrupt xảy ra. Nhiệm vụ của top half là xác định nguồn gây ra interrupt và đưa thông tin liên quan vào hàng đợi. Sau đó, top half sẽ kết thúc và cho phép CPU tiếp tục thực thi chương trình đang chạy trước đó. 
 
 2. Bottom half:
-    Bottom half là phần xử lý thứ hai của interrupt, thường được thực hiện sau khi top half hoàn thành. Nhiệm vụ của bottom half là hoàn thành các công việc còn lại liên quan đến interrupt, thường là các tác vụ phức tạp hơn và không cấp bách. Bottom half thường được thực thi trong quá trình hệ điều hành lên kế hoạch (scheduling) cho các tác vụ và chương trình khác.
+    Bottom half là phần xử lý thứ hai của interrupt, được thực hiện sau khi top half hoàn thành. Nhiệm vụ của bottom half là hoàn thành các công việc còn lại liên quan đến interrupt, thường là các tác vụ phức tạp hơn và không cấp bách. Bottom half thường được thực thi trong quá trình hệ điều hành lên kế hoạch cho các tác vụ và chương trình khác.
 
 Cách sử dụng top half và bottom half:
     + Khi một interrupt xảy ra, hệ điều hành sẽ thực hiện top half ngay lập tức để xử lý các công việc cấp bách và tối thiểu. Sau đó, hệ điều hành sẽ lên kế hoạch thực hiện bottom half ở thời điểm sau, dựa trên độ ưu tiên của các tác vụ và tình trạng hệ thống.
@@ -101,31 +101,25 @@ Trong quá trình xử lý ngắt (interrupt handler), việc gọi trực tiế
 
 Thay vì sử dụng hàm delay trong ngắt, một giải pháp tốt hơn là sử dụng cơ chế top half và bottom half như đã đề cập ở trên. Bằng cách chia công việc ra thành hai phần, bạn có thể đảm bảo rằng các công việc cấp bách được xử lý ngay lập tức, trong khi các công việc không cấp bách và phức tạp hơn có thể được lên kế hoạch thực hiện sau, khi hệ thống có sẵn tài nguyên và thời gian.
 
+Trong hàm ngắt thì chỉ được sử dụng các yếu tố với cơ chế busy wating (kiểm tra liên tục). KHÔNG được sử dụng các yếu tố với cơ chế sleep wating (chế độ ngủ)
+
 > 7. Workqueue là gì? Softirq là gì? Tasklet là gì?  So sánh ba kĩ thuật trên, lấy ví dụ trường hợp sử dụng.
 
-Workqueue, softirq và tasklet là các kỹ thuật trong hệ điều hành Linux dùng để xử lý các công việc liên quan đến ngắt (interrupt) ở mức độ bottom half. Cả ba kỹ thuật đều giúp xử lý các công việc không cấp bách sau khi top half đã hoàn thành, nhưng chúng có một số điểm khác biệt về cách thức hoạt động và sử dụng.
+Workqueue, softirq và tasklet xử lý các công việc liên quan đến ngắt ở mức độ bottom half. Cả ba kỹ thuật đều giúp xử lý các công việc  sau khi top half đã hoàn thành.
 
 1. Workqueue:
-    Workqueue là một cấu trúc dữ liệu hàng đợi trong hệ điều hành Linux dùng để lên kế hoạch thực hiện các công việc (work) theo thứ tự chúng được đưa vào hàng đợi. Mỗi công việc trong workqueue được thực hiện bởi một kernel thread, và do đó có thể ngủ (sleep) và chờ đợi các sự kiện. Workqueue thích hợp cho các tác vụ mà việc ngủ và chờ đợi là chấp nhận được.
+    Workqueue là một cấu trúc dữ liệu hàng đợi dùng để lên kế hoạch thực hiện các công việc theo thứ tự chúng được đưa vào hàng đợi. Mỗi công việc trong workqueue được thực hiện bởi một kernel thread, và do đó có thể ngủ (sleep) và chờ đợi các sự kiện. Workqueue thích hợp cho các tác vụ mà việc ngủ và chờ đợi là chấp nhận được.
 
     Ví dụ: Xử lý dữ liệu từ thiết bị ngoại vi như chuột, bàn phím, mạng, sau khi top half đã đưa dữ liệu vào hàng đợi.
 
 2. Softirq:
-    Softirq (Soft Interrupt) là một kỹ thuật xử lý ngắt mềm trong hệ điều hành Linux, cho phép thực hiện các công việc không cấp bách ở mức độ bottom half. Softirq hoạt động ở mức độ cao hơn so với workqueue và không cho phép ngủ hay chờ đợi sự kiện. Softirq thích hợp cho các tác vụ yêu cầu độ trễ thấp và không cần đợi.
+    Softirq là một kỹ thuật xử lý ngắt mềm. Softirq hoạt động ở mức độ cao hơn so với workqueue và không cho phép ngủ hay chờ đợi sự kiện. Softirq thích hợp cho các tác vụ yêu cầu độ trễ thấp và không cần đợi.
 
     Ví dụ: Xử lý gói tin trong hệ thống mạng, sau khi top half đã nhận gói tin và đưa vào hàng đợi.
 
 3. Tasklet:
-    Tasklet là một kỹ thuật xử lý ngắt trong hệ điều hành Linux dựa trên softirq, nhưng đơn giản hơn và dễ sử dụng hơn. Tasklet hoạt động tương tự như softirq, nhưng không cho phép song song hóa (concurrency) giữa các tasklet cùng loại. Tasklet thích hợp cho các tác vụ không yêu cầu độ trễ cao như softirq và không cần đến sự song song hóa.
+    Tasklet là một kỹ thuật xử lý ngắt dựa trên softirq. Tasklet hoạt động tương tự như softirq, nhưng không cho phép song song hóa (concurrency) giữa các tasklet cùng loại. Tasklet thích hợp cho các tác vụ yêu cầu độ trễ thấp như softirq và không cần đến sự song song hóa.
 
     Ví dụ: Xử lý tín hiệu từ thiết bị ngoại vi như cảm biến, sau khi top half đã nhận tín hiệu và đưa vào hàng đợi.
 
-So sánh ba kỹ thuật trên:
 
-    + Workqueue cho phép ngủ và chờ đợi sự kiện, thích hợp cho các tác vụ mà việc ngủ và chờ đợi là chấp nhận được. Workqueue sử dụng kernel thread để thực hiện các công việc, cho phép đa luồng và xử lý song song. Tuy nhiên, độ trễ của workqueue cao hơn so với softirq và tasklet.
-
-    + Softirq hoạt động ở mức độ cao hơn so với workqueue và không cho phép ngủ hay chờ đợi sự kiện. Softirq thích hợp cho các tác vụ yêu cầu độ trễ thấp và không cần đợi. Softirq cung cấp khả năng xử lý song song giữa các softirq khác nhau, nhưng cần phải quản lý cẩn thận để tránh xung đột và race condition.
-    
-    + Tasklet là một kỹ thuật xử lý ngắt dựa trên softirq, nhưng đơn giản hơn và dễ sử dụng hơn. Tasklet hoạt động tương tự như softirq, nhưng không cho phép song song hóa giữa các tasklet cùng loại. Điều này giúp giảm thiểu khả năng xảy ra race condition và làm cho việc quản lý tasklet dễ dàng hơn. Tuy nhiên, do không cho phép song song hóa, tasklet có độ trễ cao hơn softirq.
-
-Nhìn chung, lựa chọn giữa workqueue, softirq và tasklet phụ thuộc vào nhu cầu và tính chất của các tác vụ cần xử lý. Nếu tác vụ không yêu cầu độ trễ thấp và cần ngủ, chờ đợi sự kiện, workqueue là lựa chọn phù hợp. Nếu tác vụ yêu cầu độ trễ thấp và không cần ngủ, softirq là lựa chọn tốt hơn. Cuối cùng, nếu tác vụ không yêu cầu độ trễ cao như softirq và không cần đến sự song song hóa, tasklet là lựa chọn thích hợp.
