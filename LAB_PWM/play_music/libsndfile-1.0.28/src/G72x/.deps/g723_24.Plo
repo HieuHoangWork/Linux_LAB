@@ -1,0 +1,9 @@
+G72x/g723_24.lo: G72x/g723_24.c \
+ /home/hieuhoangwork/work/BBB/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/arm-linux-gnueabihf/libc/usr/include/stdc-predef.h \
+ G72x/g72x.h G72x/g72x_priv.h
+
+/home/hieuhoangwork/work/BBB/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/arm-linux-gnueabihf/libc/usr/include/stdc-predef.h:
+
+G72x/g72x.h:
+
+G72x/g72x_priv.h:
