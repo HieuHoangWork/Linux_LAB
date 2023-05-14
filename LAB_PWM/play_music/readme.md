@@ -43,3 +43,26 @@ Cài libsndfile cho trình biên dịch ARM:
     make install
 
 > Copy tập tin .wav sang thư mục pwm_play_music
+encode_mp3_to_wav/output.wav -> pwm_play_music
+
+> Copy file libsndfile.so.1 sang BBB
+Tìm file:
+    find /home/hieuhoangwork/work/BBB/libsndfile-install -name libsndfile.so.1
+Kết quả:
+    /home/hieuhoangwork/work/BBB/libsndfile-install/lib/libsndfile.so.1
+Copy sang usb hoặc dùng lệnh cp -rf
+
+> Trên BBB
+Copy file libsndfile.so.1:
+    cp -rf /media/rootfs/libsndfile.so.1 ./
+
+Thêm thư viện libsndfile.so.1 vào hệ thống
+
+Cách 1:
+Tạo biến môi trường:
+    export LD_LIBRARY_PATH=/root/LAB_PWM/pwm_play_music/lib:$LD_LIBRARY_PATH
+
+Cách 2: 
+    cd /usr/lib/
+    mv ~/LAB_PWM/pwm_play_music/lib/libsndfile.so.1 ./
+    chmod 755 /usr/lib/libsndfile.so.1
