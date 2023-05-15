@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sndfile.h>
+#include <limits.h>
 
 #define WAV_FILE "output.wav"
 
@@ -16,7 +17,7 @@
 #define PWM_DISABLE 0
 #define PWM_ENABLE 1
 
-void sigint_handler(int sig_num);
+void sigint_handler(int sig_num, siginfo_t *info, void *void_context);
 void PWM_controller(int pwm_channel, char *path_controller);
 void PWM_status(int value, char *path_status);
 void set_PWM_period(int period, char *path_set);
@@ -24,7 +25,15 @@ void set_PWM_duty(int duty, char *path_set);
 
 int main()
 {
-    signal(SIGINT, sigint_handler);
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = sigint_handler;
+
+    if (sigaction(SIGINT, &sa, NULL) == -1)
+    {
+        perror("Error: cannot handle SIGINT");
+        return EXIT_FAILURE;
+    }
 
     PWM_controller(PWM_CHANNEL_0, PWM_CONTROLLER_EXPORT);
     PWM_status(PWM_ENABLE, PWM0_PATH);
@@ -73,14 +82,20 @@ int main()
 
     // Calculate period based on sample rate
     int period = 1000000000 / sndInfo.samplerate; // Period in nanoseconds
-
-    // Set PWM period
     set_PWM_period(period, PWM0_PATH);
 
     for (int i = 0; i < num_frames; i++)
     {
         // Convert sample value to duty cycle
-        int duty = ((buffer[i] + 32768) * period) / 65536; // Convert 16-bit sample to duty cycle
+        long long tmp = (long long)buffer[i] + 1 + 32768;
+        tmp = tmp * period / 65536; // Perform division after multiplication
+
+        if (tmp > INT_MAX)
+        {
+            fprintf(stderr, "Integer overflow occurred\n");
+            continue;
+        }
+        int duty = (int)tmp; // Convert 16-bit sample to duty cycle
         set_PWM_duty(duty, PWM0_PATH);
     }
 
@@ -91,17 +106,13 @@ int main()
     return 0;
 }
 
-void sigint_handler(int sig_num)
+void sigint_handler(int sig_num, siginfo_t *info, void *void_context)
 {
-    /* Reset handler to catch SIGINT next time. */
-    signal(SIGINT, sigint_handler);
     printf("\nTerminating and turning off PWM...\n");
-
     set_PWM_duty(0, PWM0_PATH);
     set_PWM_period(0, PWM0_PATH);
     PWM_status(PWM_DISABLE, PWM0_PATH);
     PWM_controller(PWM_CHANNEL_0, PWM_CONTROLLER_UNEXPORT);
-
     exit(0);
 }
 
