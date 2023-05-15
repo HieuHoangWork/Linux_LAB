@@ -50,10 +50,21 @@ int main()
     int num_frames = sndInfo.frames;
     short *buffer = malloc(num_frames * num_channels * sizeof(short));
 
+    // Check if memory allocation was successful
+    if (buffer == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        sf_close(sndFile);
+        exit(EXIT_FAILURE);
+    }
+
     // Load data.
     if (sf_readf_short(sndFile, buffer, num_frames) != num_frames)
     {
         puts(sf_strerror(sndFile));
+        sf_close(sndFile);
+        free(buffer);
+        exit(EXIT_FAILURE);
     }
 
     // We now have the data we need, let's print some stats.
@@ -68,8 +79,9 @@ int main()
 
     for (int i = 0; i < num_frames; i++)
     {
-        // Set PWM duty cycle based on audio sample value
-        set_PWM_duty(buffer[i], PWM0_PATH);
+        // Convert sample value to duty cycle
+        int duty = ((buffer[i] + 32768) * period) / 65536; // Convert 16-bit sample to duty cycle
+        set_PWM_duty(duty, PWM0_PATH);
     }
 
     // Cleanup.
