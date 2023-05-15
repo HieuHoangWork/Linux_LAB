@@ -28,16 +28,18 @@ cd encode_mp3_to_wav
 make all
 ./encode music.mp3 /* Tạo ra file .wav */
 
-> Xử lý tập tin WAV điều khiển sung PWM
-Tải thư viện libsndfile lưu vào gcc biên dịch cross_compile
-Link: http://www.mega-nerd.com/libsndfile/#Download
-
-Giải file nén: libsndfile-1.0.28.tar.gz
-Giải nén: tar -xzf libsndfile-1.0.28.tar.gz
-Truy cập thư mục: cd libsndfile-1.0.28/
+> Tải thư viện libsndfile và build thư viện này dùng cho ARM
+1. Link: 
+    http://www.mega-nerd.com/libsndfile/#Download
+2. Giải file nén: 
+    libsndfile-1.0.28.tar.gz
+3. Giải nén: 
+    tar -xzf libsndfile-1.0.28.tar.gz
+4. Truy cập thư mục: 
+    cd libsndfile-1.0.28/
     export CC=/home/hieuhoangwork/work/BBB/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc 
     export CXX=/home/hieuhoangwork/work/BBB/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++
-Cài libsndfile cho trình biên dịch ARM:
+5. Cài libsndfile cho trình biên dịch ARM:
     ./configure --host=arm-linux-gnueabihf --prefix=/home/hieuhoangwork/work/BBB/libsndfile-install
     make
     make install
@@ -45,24 +47,25 @@ Cài libsndfile cho trình biên dịch ARM:
 > Copy tập tin .wav sang thư mục pwm_play_music
 encode_mp3_to_wav/output.wav -> pwm_play_music
 
-> Copy file libsndfile.so.1 sang BBB
-Tìm file:
-    find /home/hieuhoangwork/work/BBB/libsndfile-install -name libsndfile.so.1
-Kết quả:
-    /home/hieuhoangwork/work/BBB/libsndfile-install/lib/libsndfile.so.1
-Copy sang usb hoặc dùng lệnh cp -rf
+> Copy file thư mục lib tại ~/work/BBB/libsndfile-install/lib sang BBB. Đây là thư mục chứa file shared lib dành cho thư viện libsndfile
+Nén thư mục:
+    cd /home/hieuhoangwork/work/BBB/libsndfile-install
+    tar -czvf lib.tar.gz ./lib/
+Copy sang thẻ nhớ bằng cp -rf hoặc copy trực tiếp trên MobaXterm
+
+> Copy file thực thi "main" trong thư mục pwm_play_music và file "output.wav" trong thư mục này sang BBB
+Copy sang thẻ nhớ bằng cp -rf hoặc copy trực tiếp trên MobaXterm
 
 > Trên BBB
-Copy file libsndfile.so.1:
-    cp -rf /media/rootfs/libsndfile.so.1 ./
+Giải nén file thư viện lib.tar.gz:
+    tar -xzvf lib.tar.gz
+Tạo biến môi trường để sử dụng thư viện (trong đó /root/lib là đường dẫn trực tiếp đến thư viện lib vừa đc copy vào BBB):
+    export LD_LIBRARY_PATH=/root/lib:$LD_LIBRARY_PATH 
+Chạy chương trình pwm_play_music
+    ./main
 
-Thêm thư viện libsndfile.so.1 vào hệ thống
-
-Cách 1:
-Tạo biến môi trường:
-    export LD_LIBRARY_PATH=/root/LAB_PWM/pwm_play_music/lib:$LD_LIBRARY_PATH
-
-Cách 2: 
-    cd /usr/lib/
-    mv ~/LAB_PWM/pwm_play_music/lib/libsndfile.so.1 ./
-    chmod 755 /usr/lib/libsndfile.so.1
+Chương trình chỉ chạy chính xác khi tại đường dẫn của nó có đủ các file:
+    lib
+    lib.tar.gz
+    main
+    output.wav
