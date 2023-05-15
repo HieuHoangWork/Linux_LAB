@@ -9,7 +9,6 @@
 
 #define PWM0_PATH "pwmchip0/pwm0"
 #define PWM_CHANNEL_0 0
-#define PERIOD 100000
 
 #define PWM_CONTROLLER_EXPORT "pwmchip0/export"
 #define PWM_CONTROLLER_UNEXPORT "pwmchip0/unexport"
@@ -29,7 +28,6 @@ int main()
 
     PWM_controller(PWM_CHANNEL_0, PWM_CONTROLLER_EXPORT);
     PWM_status(PWM_ENABLE, PWM0_PATH);
-    set_PWM_period(PERIOD, PWM0_PATH);
 
     SF_INFO sndInfo;
     SNDFILE *sndFile = sf_open(WAV_FILE, SFM_READ, &sndInfo);
@@ -61,6 +59,12 @@ int main()
     // We now have the data we need, let's print some stats.
     printf("Read %d frames from %s, Sample rate: %d, Length: %fs\n",
            num_frames, WAV_FILE, sndInfo.samplerate, (float)num_frames / sndInfo.samplerate);
+
+    // Calculate period based on sample rate
+    int period = 1000000000 / sndInfo.samplerate; // Period in nanoseconds
+
+    // Set PWM period
+    set_PWM_period(period, PWM0_PATH);
 
     for (int i = 0; i < num_frames; i++)
     {
